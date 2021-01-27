@@ -14,6 +14,8 @@ const botName = 'Admin'
 app.use(express.static(path.join(__dirname, 'public')))
 
 io.on('connection', socket => {
+    socket.emit('message', formatMessage(botName, 'Welcome to Chat App'))
+
     socket.on('joinRoom', ({ username, room }) => {
         const user = userJoin(socket.id, username, room)
 
@@ -22,9 +24,12 @@ io.on('connection', socket => {
         socket.broadcast
             .to(user.room)
             .emit('message', formatMessage(botName, `${user.username} has joined the chat`))
+        
+        io.to(user.room).emit('roomUsers', {
+            room: user.room,
+            users: getRoomUsers(user.room)
+        })
     })
-
-    socket.emit('message', formatMessage(botName, 'Welcome to Chat App'))
 
     socket.on('disconnect', () => {
         const user = userLeave(socket.id)
@@ -35,7 +40,11 @@ io.on('connection', socket => {
                 .to(user.room)
                 .emit('message', formatMessage(botName, `${user.username} has left the chat`))
         }
-        
+
+        io.to(user.room).emit('roomUsers', {
+            room: user.room,
+            users: getRoomUsers(user.room)
+        })
     })
 
     socket.on('chatMessage', msg => {
